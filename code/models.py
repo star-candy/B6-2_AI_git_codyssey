@@ -56,7 +56,7 @@ class SecurityModel:
             masked_text,
         )
         # {}바로 앞 규칙이 최소 20회 이상(,) 반복되는 패턴을 찾아서 [API_KEY_MASKED]로 대체한다.
-        masked_text = re.sub(r"(sk-[a-zA-Z0-9]{20,})", "[API_KEY_MASKED]", masked_text)
+        masked_text = re.sub(r"(AI[a-zA-Z0-9]{20,})", "[API_KEY_MASKED]", masked_text)
         return masked_text
 
 

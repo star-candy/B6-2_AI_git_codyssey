@@ -1,5 +1,7 @@
 import os
 import sys
+import dotenv
+
 
 # 분리된 모델과 뷰를 가져옵니다.
 from models import GitModel, SecurityModel, AIModel
@@ -14,6 +16,9 @@ class AppController:
         self.view = ConsoleView()
 
         # API Key 검증
+        dotenv.load_dotenv(
+            "C:\\Users\\el071\\Documents\\GitHub\\B6-2_AI_git_codyssey\\code\\.env"
+        )  # .env 파일에서 환경변수 로드
         api_key = os.environ.get("AI_API_KEY")
         if not api_key:
             self.view.print_error("AI_API_KEY 환경변수가 설정되지 않았습니다.")
