@@ -17,7 +17,7 @@ class AppController:
 
         # API Key 검증
         dotenv.load_dotenv(
-            "C:\\Users\\el071\\Documents\\GitHub\\B6-2_AI_git_codyssey\\code\\.env"
+            "/Users/candystella8115467/Downloads/B6-2_AI_git_codyssey/code/.env"
         )  # .env 파일에서 환경변수 로드
         api_key = os.environ.get("AI_API_KEY")
         if not api_key:
