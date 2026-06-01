@@ -48,5 +48,42 @@ class SecurityModel:
             masked_text,
         )
         # {}바로 앞 규칙이 최소 20회 이상(,) 반복되는 패턴을 찾아서 [API_KEY_MASKED]로 대체한다.
-        masked_text = re.sub(r"(AI[a-zA-Z0-9]{20,})", "[API_KEY_MASKED]", masked_text)
+        masked_text = re.sub(r"(sk-[a-zA-Z0-9]{20,})", "[API_KEY_MASKED]", masked_text)
         return masked_text
+
+
+class AIModel:
+    """REST API를 통한 AI 모델 통신을 담당합니다."""
+
+    def __init__(self, api_key: str, model: str, temperature: float, max_tokens: int):
+        self.api_key = api_key
+        self.model = model
+        self.temperature = temperature
+        self.max_tokens = max_tokens
+        self.api_url = "https://api.openai.com/v1/chat/completions"
+
+    def generate_text(self, system_prompt: str, user_content: str) -> str:
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+        }
+        payload = {
+            "model": self.model,
+            "temperature": self.temperature,
+            "max_tokens": self.max_tokens,
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_content},
+            ],
+        }
+
+        try:
+            response = requests.post(
+                self.api_url, headers=headers, json=payload, timeout=15
+            )
+            response.raise_for_status()  # HTTP 오류가 발생하면 예외를 발생시킴 (200-299 범위 외)
+            data = response.json()
+            # 데이터중 첫번째 응답 ["choices"][0]의 메시지에서 컨텐츠 내용만 뽑아온다.
+            return data["choices"][0]["message"]["content"].strip()
+        except requests.exceptions.RequestException as e:
+            raise RuntimeError(f"AI API 호출 중 오류 발생: {e}")
