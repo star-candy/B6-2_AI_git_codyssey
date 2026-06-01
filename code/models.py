@@ -1,6 +1,9 @@
 import subprocess  # 코드 내에서 명령어를 실행하기 위한 모듈
-import requests  # AI 모델과 통신하기 위한 HTTP 요청을 보내는 모듈
+
+# import requests  # AI 모델과 통신하기 위한 HTTP 요청을 보내는 모듈
 import re  # 정규표현식 처리를 위한 모듈
+import google.generativeai as genai  # 구글 공식 패키지 임포트
+from google.generativeai.types import generation_types
 
 
 class GitModel:
@@ -12,7 +15,10 @@ class GitModel:
     def get_status() -> str:
         # working dir, staging area의 변경사항을 보여줌 (요약본)
         result = subprocess.run(
-            ["git", "status", "--short"], capture_output=True, text=True
+            ["git", "status", "--short"],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
         )
         return result.stdout.strip()
 
@@ -20,7 +26,9 @@ class GitModel:
     def get_diff() -> str:
         # 변경된 모든 사항을 가져오기 위해 HEAD 사용
         # 마지막 커밋(HEAD) 이후 모든 변경사항 보여줌 (코드수준 변경사항)
-        result = subprocess.run(["git", "diff", "HEAD"], capture_output=True, text=True)
+        result = subprocess.run(
+            ["git", "diff", "HEAD"], capture_output=True, text=True, encoding="utf-8"
+        )
         return result.stdout.strip()
 
 
@@ -53,37 +61,36 @@ class SecurityModel:
 
 
 class AIModel:
-    """REST API를 통한 AI 모델 통신을 담당합니다."""
+    """Gemini 공식 패키지를 통한 AI 모델 통신을 담당합니다."""
 
     def __init__(self, api_key: str, model: str, temperature: float, max_tokens: int):
-        self.api_key = api_key
-        self.model = model
+        self.model_name = model
         self.temperature = temperature
         self.max_tokens = max_tokens
-        self.api_url = "https://api.openai.com/v1/chat/completions"
+
+        # Gemini API Key 전역 설정
+        genai.configure(api_key=api_key)
 
     def generate_text(self, system_prompt: str, user_content: str) -> str:
-        headers = {
-            "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json",
-        }
-        payload = {
-            "model": self.model,
-            "temperature": self.temperature,
-            "max_tokens": self.max_tokens,
-            "messages": [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_content},
-            ],
-        }
-
         try:
-            response = requests.post(
-                self.api_url, headers=headers, json=payload, timeout=15
+            # 1. 모델 객체 생성 (시스템 프롬프트를 여기서 주입합니다)
+            model = genai.GenerativeModel(
+                model_name=self.model_name, system_instruction=system_prompt
             )
-            response.raise_for_status()  # HTTP 오류가 발생하면 예외를 발생시킴 (200-299 범위 외)
-            data = response.json()
-            # 데이터중 첫번째 응답 ["choices"][0]의 메시지에서 컨텐츠 내용만 뽑아온다.
-            return data["choices"][0]["message"]["content"].strip()
-        except requests.exceptions.RequestException as e:
-            raise RuntimeError(f"AI API 호출 중 오류 발생: {e}")
+
+            # 2. 생성 옵션(온도, 최대 토큰) 설정
+            # (Gemini에서는 max_tokens 대신 max_output_tokens를 사용합니다)
+            generation_config = genai.types.GenerationConfig(
+                temperature=self.temperature,
+                max_output_tokens=self.max_tokens,
+            )
+
+            # 3. 텍스트 생성 요청
+            response = model.generate_content(
+                user_content, generation_config=generation_config
+            )
+
+            return response.text.strip()
+
+        except Exception as e:
+            raise RuntimeError(f"Gemini API 호출 중 오류 발생: {e}")

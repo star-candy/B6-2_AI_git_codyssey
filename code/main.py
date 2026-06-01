@@ -10,9 +10,9 @@ def main():
     parser.add_argument(
         "command", choices=["commit", "pr"], help="실행할 명령어 (commit 또는 pr)"
     )
-    # --model 옵션 추가, 기본값은 "gpt-4.0-mini", help로 설명 추가
+    # --model 옵션 추가, 기본값은 "gemini-2.5-flash", help로 설명 추가
     parser.add_argument(
-        "--model", default="gpt-4.0-mini", help="사용할 모델을 지정합니다."
+        "--model", default="gemini-2.5-flash", help="사용할 모델을 지정합니다."
     )
     parser.add_argument(
         "--temperature", type=float, default=0.3, help="생성 다양성 조절 (기본값: 0.3)"
