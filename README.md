@@ -7,8 +7,8 @@
 ```bash
 python -m venv venv #venv 이름으로 가상환경 생성
 source venv/Scripts/activate #가상환경 실행 -> deactivate
-pip install -q -U google-genai # gemini api 통신 위한 패키지 설치
 pip install python-dotenv #API KEY 외부 세팅 위한 패키지 설치
+pip install requests  #API 통신 위한 패키지 설치
 ```
 
 - 1-2 API KEY 세팅 (.env 파일)

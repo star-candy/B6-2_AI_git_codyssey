@@ -2,8 +2,7 @@ import subprocess  # 코드 내에서 명령어를 실행하기 위한 모듈
 
 # import requests  # AI 모델과 통신하기 위한 HTTP 요청을 보내는 모듈
 import re  # 정규표현식 처리를 위한 모듈
-from google import genai  # 구글 공식 패키지 임포트
-from google.genai import types
+import requests  # HTTP 요청을 보내기 위한 모듈
 
 
 class GitModel:
@@ -61,32 +60,41 @@ class SecurityModel:
 
 
 class AIModel:
-    """최신 Gemini SDK(google-genai)를 통한 AI 모델 통신을 담당합니다."""
+    """requests 라이브러리를 사용해 직접 REST API 통신을 담당합니다."""
 
     def __init__(self, api_key: str, model: str, temperature: float, max_tokens: int):
+        self.api_key = api_key
         self.model_name = model
         self.temperature = temperature
         self.max_tokens = max_tokens
 
-        # 1. 최신 방식: 전역 설정(configure) 대신 Client 객체를 인스턴스화합니다.
-        # (OpenAI 패키지를 사용할 때와 구조가 완전히 동일해졌습니다.)
-        self.client = genai.Client(api_key=api_key)
+        # 1. 주소(URL): 어떤 모델을 사용할지 URL에 명시합니다.
+        self.api_url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model_name}:generateContent"
 
     def generate_text(self, system_prompt: str, user_content: str) -> str:
+        # 2. 헤더(Headers): API 키와 데이터 형식을 지정합니다.
+        headers = {"x-goog-api-key": self.api_key, "Content-Type": "application/json"}
+
+        # 3. 데이터(Payload): Gemini REST API 규격에 맞춘 JSON 구조입니다.
+        payload = {
+            "systemInstruction": {"parts": [{"text": system_prompt}]},
+            "contents": [{"role": "user", "parts": [{"text": user_content}]}],
+            "generationConfig": {
+                "temperature": self.temperature,
+                "maxOutputTokens": self.max_tokens,
+            },
+        }
+
         try:
-            # 2. 최신 방식: 설정(Config) 객체 안에 온도, 토큰, 그리고 시스템 프롬프트까지 한 번에 묶습니다.
-            config = types.GenerateContentConfig(
-                system_instruction=system_prompt,
-                temperature=self.temperature,
-                max_output_tokens=self.max_tokens,
+            # POST 요청 전송
+            response = requests.post(
+                self.api_url, headers=headers, json=payload, timeout=15
             )
+            response.raise_for_status()
 
-            # 3. 최신 방식: Client를 통해 텍스트 생성을 요청합니다.
-            response = self.client.models.generate_content(
-                model=self.model_name, contents=user_content, config=config
-            )
+            # 4. 응답(Response) 파싱: 복잡한 JSON 구조에서 텍스트만 추출합니다.
+            data = response.json()
+            return data["candidates"][0]["content"]["parts"][0]["text"].strip()
 
-            return response.text.strip()
-
-        except Exception as e:
-            raise RuntimeError(f"최신 Gemini API 호출 중 오류 발생: {e}")
+        except requests.exceptions.RequestException as e:
+            raise RuntimeError(f"Gemini REST API 호출 중 오류 발생: {e}")
