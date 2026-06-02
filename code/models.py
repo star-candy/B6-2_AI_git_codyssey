@@ -2,8 +2,8 @@ import subprocess  # 코드 내에서 명령어를 실행하기 위한 모듈
 
 # import requests  # AI 모델과 통신하기 위한 HTTP 요청을 보내는 모듈
 import re  # 정규표현식 처리를 위한 모듈
-import google.generativeai as genai  # 구글 공식 패키지 임포트
-from google.generativeai.types import generation_types
+from google import genai  # 구글 공식 패키지 임포트
+from google.genai import types
 
 
 class GitModel:
@@ -61,36 +61,32 @@ class SecurityModel:
 
 
 class AIModel:
-    """Gemini 공식 패키지를 통한 AI 모델 통신을 담당합니다."""
+    """최신 Gemini SDK(google-genai)를 통한 AI 모델 통신을 담당합니다."""
 
     def __init__(self, api_key: str, model: str, temperature: float, max_tokens: int):
         self.model_name = model
         self.temperature = temperature
         self.max_tokens = max_tokens
 
-        # Gemini API Key 전역 설정
-        genai.configure(api_key=api_key)
+        # 1. 최신 방식: 전역 설정(configure) 대신 Client 객체를 인스턴스화합니다.
+        # (OpenAI 패키지를 사용할 때와 구조가 완전히 동일해졌습니다.)
+        self.client = genai.Client(api_key=api_key)
 
     def generate_text(self, system_prompt: str, user_content: str) -> str:
         try:
-            # 1. 모델 객체 생성 (시스템 프롬프트를 여기서 주입합니다)
-            model = genai.GenerativeModel(
-                model_name=self.model_name, system_instruction=system_prompt
-            )
-
-            # 2. 생성 옵션(온도, 최대 토큰) 설정
-            # (Gemini에서는 max_tokens 대신 max_output_tokens를 사용합니다)
-            generation_config = genai.types.GenerationConfig(
+            # 2. 최신 방식: 설정(Config) 객체 안에 온도, 토큰, 그리고 시스템 프롬프트까지 한 번에 묶습니다.
+            config = types.GenerateContentConfig(
+                system_instruction=system_prompt,
                 temperature=self.temperature,
                 max_output_tokens=self.max_tokens,
             )
 
-            # 3. 텍스트 생성 요청
-            response = model.generate_content(
-                user_content, generation_config=generation_config
+            # 3. 최신 방식: Client를 통해 텍스트 생성을 요청합니다.
+            response = self.client.models.generate_content(
+                model=self.model_name, contents=user_content, config=config
             )
 
             return response.text.strip()
 
         except Exception as e:
-            raise RuntimeError(f"Gemini API 호출 중 오류 발생: {e}")
+            raise RuntimeError(f"최신 Gemini API 호출 중 오류 발생: {e}")
